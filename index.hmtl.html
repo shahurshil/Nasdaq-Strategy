@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QQQ Strategy Pro · Live Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400&family=Inconsolata:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#08080f;--s1:#0d0d17;--s2:#111120;--s3:#161628;--s4:#1c1c30;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.15);
+  --win:#00e5a0;--win2:rgba(0,229,160,0.12);--win3:rgba(0,229,160,0.06);
+  --loss:#ff3d6b;--loss2:rgba(255,61,107,0.12);--loss3:rgba(255,61,107,0.06);
+  --blue:#5b9bff;--blue2:rgba(91,155,255,0.12);
+  --gold:#f5a623;--gold2:rgba(245,166,35,0.12);
+  --amber:#fb923c;--purple:#b39dfa;--cyan:#22d3ee;
+  --text:#eef2ff;--dim:#5a6a8a;--muted:#1a1a2e;
+  --r:10px;--rs:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Archivo',sans-serif;font-size:14px;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 1200px 700px at -5% 0%,rgba(0,229,160,0.04) 0%,transparent 55%),
+             radial-gradient(ellipse 900px 600px at 105% 100%,rgba(79,142,247,0.05) 0%,transparent 55%);}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 0;}
+.brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.brand-logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;
+  background:linear-gradient(135deg,var(--win),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.brand-sub{font-family:'Inconsolata',monospace;font-size:9px;letter-spacing:2.5px;color:var(--dim);text-transform:uppercase;margin-top:2px;}
+.nav-group{padding:0 12px;margin-bottom:4px;}
+.nav-label{font-family:'Inconsolata',monospace;font-size:9px;letter-spacing:2.5px;color:#2a2a45;
+  text-transform:uppercase;padding:0 8px;margin-bottom:4px;margin-top:10px;}
+.nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:10px 10px;border-radius:var(--rs);
+  font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:500;color:var(--dim);
+  background:none;border:none;cursor:pointer;transition:all 0.15s;text-align:left;}
+.nav-btn:hover{background:var(--s2);color:var(--text);}
+.nav-btn.active{background:var(--win2);color:var(--win);}
+.nav-icon{font-size:15px;flex-shrink:0;}
+.sb-footer{margin-top:auto;padding:16px 20px 0;border-top:1px solid var(--border);}
+.sb-stat-label{font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:6px;}
+.sb-stat-val{font-size:24px;font-weight:800;color:var(--win);}
+.sb-stat-sub{font-size:12px;color:var(--dim);margin-top:3px;}
+.sb-last{font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim);margin-top:12px;padding-top:10px;border-top:1px solid var(--border);}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;padding:32px 36px 80px;}
+.page{display:none;}.page.active{display:block;}
+.page-eyebrow{font-family:'Inconsolata',monospace;font-size:10px;letter-spacing:3px;color:var(--win);
+  text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.page-eyebrow::before{content:'';width:18px;height:1px;background:var(--win);}
+.page-title{font-size:36px;font-weight:900;letter-spacing:-1.5px;margin-bottom:8px;}
+.page-sub{font-size:14px;color:var(--dim);margin-bottom:28px;line-height:1.6;}
+
+/* ── KPI GRID ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);
+  border-radius:var(--r);overflow:hidden;margin-bottom:22px;}
+.kpi{background:var(--s2);padding:22px 20px;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.kpi.g::after{background:linear-gradient(90deg,var(--win),transparent);}
+.kpi.b::after{background:linear-gradient(90deg,var(--blue),transparent);}
+.kpi.r::after{background:linear-gradient(90deg,var(--loss),transparent);}
+.kpi.gold::after{background:linear-gradient(90deg,var(--gold),transparent);}
+.kpi.pu::after{background:linear-gradient(90deg,var(--purple),transparent);}
+.kpi-label{font-family:'Inconsolata',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:7px;}
+.kpi-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px;letter-spacing:-0.5px;}
+.kpi-val.g{color:var(--win);}.kpi-val.b{color:var(--blue);}.kpi-val.r{color:var(--loss);}.kpi-val.gold{color:var(--gold);}.kpi-val.pu{color:var(--purple);}
+.kpi-sub{font-size:12px;color:var(--dim);}
+
+/* ── CARDS ── */
+.card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:22px;}
+.card:hover{border-color:var(--border2);}
+.card-title{font-family:'Inconsolata',monospace;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:14px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.card-header .card-title{margin-bottom:0;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.mt{margin-top:18px;}
+.badge{font-family:'Inconsolata',monospace;font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid;}
+.badge.g{background:var(--win2);color:var(--win);border-color:rgba(0,229,160,0.25);}
+.badge.r{background:var(--loss2);color:var(--loss);border-color:rgba(255,51,102,0.25);}
+.badge.b{background:var(--blue2);color:var(--blue);border-color:rgba(79,142,247,0.25);}
+.badge.gold{background:var(--gold2);color:var(--gold);border-color:rgba(245,166,35,0.25);}
+
+/* ── CALLOUT ── */
+.callout{border-left:2px solid;padding:12px 16px;font-size:13px;line-height:1.7;color:var(--dim);
+  margin-top:12px;border-radius:0 7px 7px 0;}
+.callout strong{font-weight:600;}
+.callout.g{border-color:var(--win);background:var(--win3);}.callout.g strong{color:var(--win);}
+.callout.r{border-color:var(--loss);background:var(--loss3);}.callout.r strong{color:var(--loss);}
+.callout.b{border-color:var(--blue);background:var(--blue2);}.callout.b strong{color:var(--blue);}
+.callout.gold{border-color:var(--gold);background:var(--gold2);}.callout.gold strong{color:var(--gold);}
+
+/* ── IMPORT ZONE ── */
+.import-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:48px 20px;
+  text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:24px;}
+.import-zone:hover,.import-zone.drag{border-color:var(--win);background:var(--win3);}
+.import-icon{font-size:48px;margin-bottom:14px;}
+.import-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+.import-sub{font-size:13px;color:var(--dim);}
+.import-status{margin-top:18px;padding:14px 18px;background:var(--win2);border:1px solid rgba(0,229,160,0.25);
+  border-radius:var(--rs);font-size:13px;color:var(--win);display:none;}
+.import-status.show{display:block;}
+input[type=file]{display:none;}
+
+/* ── HEATMAP ── */
+.heatmap{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.hm-cell{border-radius:var(--rs);padding:14px;text-align:center;border:1px solid;}
+.hm-label{font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;}
+.hm-val{font-size:26px;font-weight:800;margin-bottom:4px;}
+.hm-sub{font-size:10px;color:var(--dim);}
+
+/* ── TICKER CARDS ── */
+.ticker-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.ticker-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.ticker-name{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.tk-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:13px;}
+.tk-row:last-child{border-bottom:none;}
+.tk-label{color:var(--dim);}
+.tk-val{font-weight:600;font-family:'Inconsolata',monospace;}
+.tk-val.g{color:var(--win);}.tk-val.r{color:var(--loss);}.tk-val.b{color:var(--blue);}
+
+/* ── BAR COMPARISON ── */
+.bar-compare{margin-bottom:10px;}
+.bc-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;}
+.bc-label span:first-child{color:var(--dim);}
+.bc-track{height:9px;background:var(--muted);border-radius:4px;overflow:hidden;}
+.bc-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+
+/* ── TRADE TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:var(--rs);}
+table{width:100%;border-collapse:collapse;}
+th{font-family:'Inconsolata',monospace;font-size:9px;letter-spacing:2px;color:var(--dim);
+  text-transform:uppercase;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+.pill{display:inline-flex;align-items:center;gap:4px;font-family:'Inconsolata',monospace;font-size:11px;
+  padding:2px 9px;border-radius:20px;border:1px solid;}
+.pill.win{background:var(--win2);color:var(--win);border-color:rgba(0,229,160,0.25);}
+.pill.loss{background:var(--loss2);color:var(--loss);border-color:rgba(255,51,102,0.25);}
+.pill.be{background:rgba(100,100,100,0.15);color:#888;border-color:rgba(100,100,100,0.2);}
+
+/* ── INSIGHTS ── */
+.insight-card{border-radius:var(--r);padding:18px;border:1px solid;position:relative;}
+.insight-card.g{background:var(--win3);border-color:rgba(0,229,160,0.18);}
+.insight-card.r{background:var(--loss3);border-color:rgba(255,51,102,0.18);}
+.insight-card.b{background:var(--blue2);border-color:rgba(79,142,247,0.18);}
+.insight-card.gold{background:var(--gold2);border-color:rgba(245,166,35,0.18);}
+.insight-emoji{font-size:30px;margin-bottom:10px;}
+.insight-label{font-family:'Inconsolata',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:7px;}
+.insight-card.g .insight-label{color:var(--win);}
+.insight-card.r .insight-label{color:var(--loss);}
+.insight-card.b .insight-label{color:var(--blue);}
+.insight-card.gold .insight-label{color:var(--gold);}
+.insight-text{font-size:14px;line-height:1.7;color:var(--text);}
+.insight-text strong{font-weight:700;}
+.insight-card.g .insight-text strong{color:var(--win);}
+.insight-card.r .insight-text strong{color:var(--loss);}
+.insight-card.b .insight-text strong{color:var(--blue);}
+.insight-card.gold .insight-text strong{color:var(--gold);}
+
+/* ── PIP STRIP ── */
+.pip-wrap{display:flex;flex-wrap:wrap;gap:2px;}
+.pip{width:10px;height:10px;border-radius:2px;cursor:default;transition:transform 0.1s;}
+.pip:hover{transform:scale(1.8);}
+.pip.w{background:var(--win);}.pip.l{background:var(--loss);}.pip.b{background:#444;}
+.pip.ww{background:#00cfff;}.pip.wl{background:var(--amber);}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.filter-sel{background:var(--s3);border:1px solid var(--border2);border-radius:var(--rs);
+  padding:8px 14px;font-family:'Inconsolata',monospace;font-size:12px;color:var(--text);
+  outline:none;cursor:pointer;}
+.filter-sel:focus{border-color:var(--win);}
+.filter-sel option{background:var(--s3);}
+
+/* ── EMPTY STATE ── */
+.empty{padding:60px 20px;text-align:center;}
+.empty-icon{font-size:48px;margin-bottom:14px;}
+.empty-title{font-size:17px;font-weight:700;margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--dim);}
+
+/* ── SECTION DIVIDER ── */
+.sec-div{display:flex;align-items:center;gap:12px;margin:24px 0 16px;}
+.sec-div-title{font-size:15px;font-weight:700;white-space:nowrap;}
+.sec-div-line{flex:1;height:1px;background:var(--border);}
+
+
+/* ── TABS ── */
+.tab-btn{background:var(--s3);border:1px solid var(--border2);border-radius:var(--rs);
+  padding:8px 20px;font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;
+  color:var(--dim);cursor:pointer;transition:all 0.15s;}
+.tab-btn:hover{background:var(--s4);color:var(--text);}
+.tab-btn.active{background:var(--win2);color:var(--win);border-color:rgba(0,229,160,0.3);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;z-index:999;background:var(--s3);
+  border:1px solid var(--border2);border-radius:var(--rs);padding:11px 18px;font-size:13px;font-weight:600;
+  transform:translateY(60px);opacity:0;transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.g{border-color:rgba(0,229,160,0.4);}
+.toast.r{border-color:rgba(255,51,102,0.4);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">QQQ Strategy Pro</div>
+    <div class="brand-sub">V1 · Live Dashboard</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Analytics</div>
+    <button class="nav-btn active" onclick="nav('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</button>
+    <button class="nav-btn" onclick="nav('time',this)"><span class="nav-icon">🕐</span>Time Analysis</button>
+    <button class="nav-btn" onclick="nav('setups',this)"><span class="nav-icon">🎯</span>Setup Analysis</button>
+    <button class="nav-btn" onclick="nav('confluence',this)"><span class="nav-icon">🔗</span>Confluence Strength</button>
+    <button class="nav-btn" onclick="nav('insights',this)"><span class="nav-icon">💡</span>Insights</button>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Records</div>
+    <button class="nav-btn" onclick="nav('history',this)"><span class="nav-icon">📋</span>Trade History</button>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-stat-label">Win Rate</div>
+    <div class="sb-stat-val" id="sb-wr">—</div>
+    <div class="sb-stat-sub" id="sb-wl">No data loaded</div>
+    <div class="sb-last" id="sb-last">Drop your Excel file to begin</div>
+  </div>
+  <div style="margin:0 12px 16px;padding:10px 12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:6px;font-size:11px;color:#00e5a0;line-height:1.5">
+    📊 <strong>Read-only dashboard</strong><br>
+    <span style="color:#4a5878">Data: Feb 2025 – Feb 2026</span>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+<!-- ▸ IMPORT -->
+<div class="page" id="page-import">
+  <div class="page-eyebrow">Data</div>
+  <div class="page-title">Import Excel File</div>
+  <div class="page-sub">Read-only shared dashboard. Data is pre-loaded from Feb 2025 to Feb 2026.</div>
+  <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+       ondragover="e=>{e.preventDefault();this.classList.add('drag')}"
+       ondragleave="e=>{this.classList.remove('drag')}"
+       ondrop="handleDrop(event)">
+    <div class="import-icon">📁</div>
+    <div class="import-title">Drag & Drop Your Excel File Here</div>
+    <div class="import-sub">or click to browse · Accepts .xlsx files · Both sheets loaded automatically</div>
+  </div>
+  <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+  <div class="import-status" id="import-status"></div>
+
+  <div class="grid2 mt">
+    <div class="card">
+      <div class="card-title">Expected File Structure</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--dim)">
+        <div style="margin-bottom:8px"><span style="color:var(--win);font-weight:700">Sheet 1:</span> QQQ Strategy</div>
+        <div style="padding-left:14px;font-size:12px">Date · Time of Entry · Type of Trade · Result · Wicked<br>
+        Is QQQ/MSFT/AAPL/NVDA at Key Level · Follow Through · Setup Type</div>
+        <div style="margin-top:10px;margin-bottom:8px"><span style="color:var(--blue);font-weight:700">Sheet 2:</span> Confluence Strength</div>
+        <div style="padding-left:14px;font-size:12px">QQQ move % · NVDA/MSFT/AAPL Expected vs Actual · Strength scores</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Daily Workflow</div>
+      <div style="font-size:13px;line-height:2;color:var(--dim)">
+        <div>1️⃣  Log your trade in Excel as normal</div>
+        <div>2️⃣  Come back to this page</div>
+        <div>3️⃣  Drop your updated Excel file here</div>
+        <div>4️⃣  All analytics update instantly ✅</div>
+      </div>
+      <div class="callout g" style="margin-top:12px">
+        <strong>Data persists between sessions.</strong> Only re-import when you have new trades.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ▸ DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-eyebrow">Analytics</div>
+  <div class="page-title">Dashboard</div>
+  <div class="page-sub">Complete performance overview — all metrics derived from your Excel data.</div>
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi g"><div class="kpi-label">Win Rate</div><div class="kpi-val g" id="k-wr">—</div><div class="kpi-sub" id="k-wl">—</div></div>
+    <div class="kpi b"><div class="kpi-label">Total Trades</div><div class="kpi-val b" id="k-total">—</div><div class="kpi-sub" id="k-be">—</div></div>
+    <div class="kpi gold"><div class="kpi-label">Best Time</div><div class="kpi-val gold" id="k-besttime">—</div><div class="kpi-sub" id="k-besttimesub">—</div></div>
+    <div class="kpi pu"><div class="kpi-label">Best Setup</div><div class="kpi-val pu" id="k-bestsetup">—</div><div class="kpi-sub" id="k-bestsetupsub">—</div></div>
+    <div class="kpi r"><div class="kpi-label">Wick-Out WR</div><div class="kpi-val r" id="k-wick">—</div><div class="kpi-sub" id="k-wicksub">vs non-wicked</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Equity Curve (R multiples)</div><span class="badge b" id="eq-ct">—</span></div>
+      <div style="font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim);margin-bottom:8px;letter-spacing:1px">Based on -1R loss · +1.5R win per trade</div>
+      <div style="position:relative;height:220px"><canvas id="eqChart"></canvas></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:var(--rs);overflow:hidden;margin-top:12px" id="eq-stats">
+        <div style="background:var(--s3);padding:10px 14px"><div style="font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:4px">Max Drawdown</div><div style="font-size:18px;font-weight:700;color:var(--loss)" id="eq-dd">—</div></div>
+        <div style="background:var(--s3);padding:10px 14px"><div style="font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:4px">Max Consec Wins</div><div style="font-size:18px;font-weight:700;color:var(--win)" id="eq-mw">—</div></div>
+        <div style="background:var(--s3);padding:10px 14px"><div style="font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:4px">Max Consec Losses</div><div style="font-size:18px;font-weight:700;color:var(--loss)" id="eq-ml">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Monthly Win Rate</div></div>
+      <div style="position:relative;height:260px"><canvas id="monthChart"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2 mt">
+    <div class="card">
+      <div class="card-header"><div class="card-title">All Trades · Hover to inspect</div></div>
+      <div class="pip-wrap" id="pip-wrap"></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim)"><div style="width:8px;height:8px;border-radius:2px;background:var(--win)"></div>Win</div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim)"><div style="width:8px;height:8px;border-radius:2px;background:var(--loss)"></div>Loss</div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim)"><div style="width:8px;height:8px;border-radius:2px;background:#444"></div>Breakeven</div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim)"><div style="width:8px;height:8px;border-radius:2px;background:#00cfff"></div>Win — Wick</div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Inconsolata',monospace;font-size:9px;color:var(--dim)"><div style="width:8px;height:8px;border-radius:2px;background:var(--amber)"></div>Loss — Wick</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Win / Loss / Breakeven Split</div></div>
+      <div style="position:relative;height:200px"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ▸ TIME ANALYSIS -->
+<div class="page" id="page-time">
+  <div class="page-eyebrow">Analytics</div>
+  <div class="page-title">Time Analysis</div>
+  <div class="page-sub">Win rate and P&L breakdown by time of entry and day of week.</div>
+  <div class="card">
+    <div class="card-title">Win Rate by Time Window</div>
+    <div class="heatmap" id="time-heatmap"></div>
+    <div style="position:relative;height:220px"><canvas id="timeChart"></canvas></div>
+    <div class="callout g" id="time-callout"></div>
+  </div>
+  <div class="card mt">
+    <div class="card-title">Win Rate by Day of Week</div>
+    <div style="position:relative;height:200px"><canvas id="dowChart"></canvas></div>
+  </div>
+  <div class="card mt">
+    <div class="card-title">Trade Volume by Time Window</div>
+    <div style="position:relative;height:180px"><canvas id="timeVolChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ▸ SETUP ANALYSIS -->
+<div class="page" id="page-setups">
+  <div class="page-eyebrow">Analytics</div>
+  <div class="page-title">Setup Analysis</div>
+  <div class="page-sub">Confluence usage, win rates by ticker, trade type breakdowns — all by time of day.</div>
+
+  <!-- Overall trade type + wick -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Win Rate by Trade Type (All Trades)</div>
+      <div style="position:relative;height:220px"><canvas id="typeChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Wick-Out vs Normal</div>
+      <div style="position:relative;height:220px"><canvas id="wickChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Confluence usage summary -->
+  <div class="sec-div"><div class="sec-div-title">Confluence Usage (% of QQQ Trades)</div><div class="sec-div-line"></div></div>
+  <div class="grid3" id="conf-usage-cards"></div>
+
+  <!-- Per-ticker tabs -->
+  <div class="sec-div"><div class="sec-div-title">Per-Ticker Deep Dive</div><div class="sec-div-line"></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:18px">
+    <button class="tab-btn active" id="tab-nvda" onclick="switchTicker('NVDA',this)">🟢 NVDA</button>
+    <button class="tab-btn" id="tab-msft" onclick="switchTicker('MSFT',this)">🔵 MSFT</button>
+    <button class="tab-btn" id="tab-aapl" onclick="switchTicker('AAPL',this)">⚪ AAPL</button>
+  </div>
+  <div id="ticker-detail"></div>
+
+  <!-- Strong/Weak -->
+  <div class="sec-div"><div class="sec-div-title">Strong vs Weak Play</div><div class="sec-div-line"></div></div>
+  <div class="card">
+    <div style="position:relative;height:180px"><canvas id="swChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ▸ CONFLUENCE STRENGTH -->
+<div class="page" id="page-confluence">
+  <div class="page-eyebrow">Analytics</div>
+  <div class="page-title">Confluence Strength</div>
+  <div class="page-sub">Based on QQQ % move — how much did NVDA, MSFT, and AAPL actually move vs expected? Win rate by alignment strength.</div>
+
+  <div class="kpi-row" id="conf-kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi g"><div class="kpi-label">Total Entries</div><div class="kpi-val g" id="ck-total">—</div><div class="kpi-sub">Confluence rows</div></div>
+    <div class="kpi b"><div class="kpi-label">Strong WR</div><div class="kpi-val b" id="ck-strong">—</div><div class="kpi-sub" id="ck-strong-n">—</div></div>
+    <div class="kpi gold"><div class="kpi-label">Moderate WR</div><div class="kpi-val gold" id="ck-mod">—</div><div class="kpi-sub" id="ck-mod-n">—</div></div>
+    <div class="kpi r"><div class="kpi-label">Conflict WR</div><div class="kpi-val r" id="ck-conf">—</div><div class="kpi-sub" id="ck-conf-n">—</div></div>
+  </div>
+
+  <div class="grid2 mt">
+    <div class="card">
+      <div class="card-title">Win Rate by Overall Strength</div>
+      <div style="position:relative;height:240px"><canvas id="confStrChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Trade Count by Overall Strength</div>
+      <div style="position:relative;height:240px"><canvas id="confCountChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-div mt"><div class="sec-div-title">Per-Stock Strength Breakdown</div><div class="sec-div-line"></div></div>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title" style="color:#a78bfa">🟢 NVDA Strength vs Win Rate</div>
+      <div style="position:relative;height:200px"><canvas id="nvdaStrChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#22d3ee">🔵 MSFT Strength vs Win Rate</div>
+      <div style="position:relative;height:200px"><canvas id="msftStrChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#4f8ef7">⚪ AAPL Strength vs Win Rate</div>
+      <div style="position:relative;height:200px"><canvas id="aaplStrChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-div mt"><div class="sec-div-title">QQQ Move % vs Stock Move Alignment</div><div class="sec-div-line"></div></div>
+  <div class="card" id="conf-table-wrap">
+    <div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Import your Excel to see confluence data</div><div class="empty-sub">Requires the Confluence Strength sheet in your file.</div></div>
+  </div>
+</div>
+
+<!-- ▸ INSIGHTS -->
+<div class="page" id="page-insights">
+  <div class="page-eyebrow">Analytics</div>
+  <div class="page-title">Key Insights</div>
+  <div class="page-sub">Auto-generated patterns from your trading data. Updates every time you import.</div>
+  <div class="grid2" id="insights-grid"></div>
+</div>
+
+<!-- ▸ HISTORY -->
+<div class="page" id="page-history">
+  <div class="page-eyebrow">Records</div>
+  <div class="page-title">Trade History</div>
+  <div class="page-sub">All trades from your Excel. Read-only — edit in Excel then re-import.</div>
+  <div class="filters">
+    <select class="filter-sel" id="f-result" onchange="renderHistory()"><option value="">All Results</option><option>Win</option><option>Loss</option><option>Breakeven</option></select>
+    <select class="filter-sel" id="f-type" onchange="renderHistory()"><option value="">All Types</option><option>Reversal</option><option>Breakout</option><option>Continuation</option><option>Break and Retest</option></select>
+    <select class="filter-sel" id="f-wick" onchange="renderHistory()"><option value="">All</option><option value="Yes">Wicked</option><option value="No">Not Wicked</option></select>
+    <select class="filter-sel" id="f-qqq" onchange="renderHistory()"><option value="">QQQ Level: All</option><option value="Yes">At Key Level</option><option value="No">Not at Level</option></select>
+    <select class="filter-sel" id="f-month" onchange="renderHistory()"><option value="">All Months</option></select>
+  </div>
+  <div class="card" id="history-wrap"></div>
+</div>
+
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+//  BAKED DATA — read-only shared version, no import needed
+// ══════════════════════════════════════════════════════════════════════════════
+const BAKED_TRADES = [{"date": "2025-02-05", "time": "07:25", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "Intraday Structure (multiple tests)", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Continuation", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-02"}, {"date": "2025-02-06", "time": "09:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "Intraday Structure (multiple tests)", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-02"}, {"date": "2025-02-10", "time": "08:50", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-02"}, {"date": "2025-02-11", "time": "07:05", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-02"}, {"date": "2025-02-11", "time": "09:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-02"}, {"date": "2025-02-12", "time": "09:50", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-02"}, {"date": "2025-02-12", "time": "08:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "VWAP Bounce", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-02"}, {"date": "2025-02-13", "time": "08:55", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-02"}, {"date": "2025-02-14", "time": "07:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "Intraday Structure (multiple tests)", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-02"}, {"date": "2025-02-14", "time": "09:10", "type": "Break and Retest", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-02"}, {"date": "2025-02-18", "time": "07:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-02"}, {"date": "2025-02-21", "time": "09:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": null, "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-02"}, {"date": "2025-02-25", "time": "08:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "Intraday Structure (multiple tests)", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-02"}, {"date": "2025-02-25", "time": "09:20", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-02"}, {"date": "2025-02-28", "time": "06:55", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Friday", "month": "2025-02"}, {"date": "2025-03-04", "time": "09:55", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-07", "time": "07:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-07", "time": "10:10", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-11", "time": "09:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "Opening Print Retest", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-12", "time": "07:15", "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-03"}, {"date": "2025-03-12", "time": "09:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "Opening Print Retest", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-03"}, {"date": "2025-03-13", "time": "07:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-03"}, {"date": "2025-03-17", "time": "08:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-03"}, {"date": "2025-03-17", "time": "08:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-03"}, {"date": "2025-03-18", "time": "06:45", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-18", "time": "09:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-19", "time": "07:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-03"}, {"date": "2025-03-20", "time": "06:55", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-03"}, {"date": "2025-03-20", "time": "07:25", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-03"}, {"date": "2025-03-21", "time": "07:35", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-21", "time": "10:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-25", "time": "07:45", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-25", "time": "07:45", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-03"}, {"date": "2025-03-26", "time": "08:30", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-03"}, {"date": "2025-03-27", "time": "08:05", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-03"}, {"date": "2025-03-27", "time": "09:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": "Yes (Partial)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-03"}, {"date": "2025-03-28", "time": "07:00", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-28", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-03"}, {"date": "2025-03-31", "time": "08:10", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "Intraday Structure (multiple tests)", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-03"}, {"date": "2025-03-31", "time": "09:10", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-03"}, {"date": "2025-03-31", "time": "10:10", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-03"}, {"date": "2025-03-31", "time": "09:40", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-03"}, {"date": "2025-04-01", "time": "09:20", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-02", "time": "07:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-04", "time": "09:10", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-04"}, {"date": "2025-04-04", "time": "09:35", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-04"}, {"date": "2025-04-04", "time": "07:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-04"}, {"date": "2025-04-08", "time": "07:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-08", "time": "08:50", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "5 min STC", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-08", "time": "10:05", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-09", "time": "07:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-10", "time": "09:30", "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-04"}, {"date": "2025-04-11", "time": "10:30", "type": null, "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-04"}, {"date": "2025-04-14", "time": "10:15", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-04"}, {"date": "2025-04-15", "time": "06:55", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-15", "time": "06:55", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-16", "time": "06:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "VWAP Bounce", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-16", "time": "09:05", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-17", "time": "09:55", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "5 min STC", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-04"}, {"date": "2025-04-23", "time": "07:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-23", "time": "08:35", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-23", "time": "09:25", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-24", "time": "07:45", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-04"}, {"date": "2025-04-24", "time": "07:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-04"}, {"date": "2025-04-25", "time": "08:40", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-04"}, {"date": "2025-04-28", "time": "06:50", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Monday", "month": "2025-04"}, {"date": "2025-04-28", "time": "07:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PML", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-04"}, {"date": "2025-04-29", "time": "07:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "VWAP Bounce", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-29", "time": "10:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-04"}, {"date": "2025-04-30", "time": "09:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-04-30", "time": "07:10", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-04"}, {"date": "2025-05-01", "time": "06:50", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-01", "time": "07:10", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-01", "time": "09:05", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-02", "time": "09:45", "type": null, "result": "Loss", "wicked": "Yes", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-02", "time": "09:45", "type": null, "result": "Win", "wicked": "Yes", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-07", "time": "09:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-05"}, {"date": "2025-05-08", "time": "07:55", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-08", "time": "08:25", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-08", "time": "09:00", "type": "Break and Retest", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "No", "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-09", "time": "09:10", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-09", "time": "09:10", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-13", "time": "08:45", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-05"}, {"date": "2025-05-15", "time": "07:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-19", "time": "08:40", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-05"}, {"date": "2025-05-19", "time": "10:25", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-05"}, {"date": "2025-05-20", "time": "07:20", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-05"}, {"date": "2025-05-20", "time": "08:25", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-05"}, {"date": "2025-05-21", "time": "08:35", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-05"}, {"date": "2025-05-22", "time": "08:40", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-22", "time": "09:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-05"}, {"date": "2025-05-23", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-23", "time": "08:05", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-23", "time": "09:10", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "No", "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-27", "time": "08:40", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-05"}, {"date": "2025-05-27", "time": "09:40", "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-05"}, {"date": "2025-05-30", "time": "07:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-05"}, {"date": "2025-05-30", "time": "10:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-05"}, {"date": "2025-06-02", "time": "07:55", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-02", "time": "10:10", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-05", "time": "10:10", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-06"}, {"date": "2025-06-06", "time": "10:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "5 min STC", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-09", "time": "07:40", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-09", "time": "09:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-10", "time": "07:20", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-06"}, {"date": "2025-06-10", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-06"}, {"date": "2025-06-10", "time": "08:05", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-06"}, {"date": "2025-06-11", "time": "09:45", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-06"}, {"date": "2025-06-12", "time": "08:50", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-06"}, {"date": "2025-06-13", "time": "06:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-13", "time": "09:05", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-13", "time": "09:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-17", "time": "09:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "No", "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-06"}, {"date": "2025-06-18", "time": "08:35", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-06"}, {"date": "2025-06-18", "time": "08:35", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-06"}, {"date": "2025-06-20", "time": "08:05", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-20", "time": "09:15", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "5 min STC", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-20", "time": "10:05", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "PDL", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-23", "time": "08:20", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-23", "time": "08:30", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-25", "time": "07:25", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-06"}, {"date": "2025-06-25", "time": "08:25", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-06"}, {"date": "2025-06-26", "time": "06:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-06"}, {"date": "2025-06-27", "time": "08:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-06"}, {"date": "2025-06-30", "time": "09:30", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-30", "time": "08:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-06"}, {"date": "2025-06-30", "time": "10:25", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-06"}, {"date": "2025-07-01", "time": "06:45", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-01", "time": "08:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-02", "time": null, "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-07", "time": "06:55", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "No", "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Monday", "month": "2025-07"}, {"date": "2025-07-08", "time": "09:05", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-08", "time": "09:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-08", "time": "10:15", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-09", "time": "07:35", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-09", "time": "07:55", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-09", "time": "07:55", "type": "Reversal", "result": "Breakeven", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-11", "time": "09:20", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-07"}, {"date": "2025-07-14", "time": "07:00", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-07"}, {"date": "2025-07-14", "time": "07:20", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-07"}, {"date": "2025-07-15", "time": "08:15", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-15", "time": "09:50", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-15", "time": "10:05", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-15", "time": "10:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-16", "time": "07:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-16", "time": "07:30", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-16", "time": "07:30", "type": "Breakout", "result": "Breakeven", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-16", "time": "08:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-16", "time": "09:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-17", "time": "09:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-07"}, {"date": "2025-07-18", "time": "07:15", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-07"}, {"date": "2025-07-18", "time": "09:35", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-07"}, {"date": "2025-07-23", "time": "08:05", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-07"}, {"date": "2025-07-25", "time": "07:25", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-07"}, {"date": "2025-07-25", "time": "09:05", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-07"}, {"date": "2025-07-29", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-29", "time": "06:45", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-07"}, {"date": "2025-07-31", "time": "09:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-07"}, {"date": "2025-07-31", "time": "09:05", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-07"}, {"date": "2025-08-04", "time": "07:20", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-06", "time": "07:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-08"}, {"date": "2025-08-07", "time": "06:40", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-08-07", "time": "07:25", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-08-07", "time": "07:25", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-08-07", "time": "09:45", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-08-11", "time": "08:35", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Weak", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-11", "time": "10:10", "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-13", "time": "07:55", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-08"}, {"date": "2025-08-15", "time": "07:40", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Weak", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-08"}, {"date": "2025-08-18", "time": "07:35", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-18", "time": "07:45", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-18", "time": "09:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-19", "time": "06:40", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "Pre-7:00", "dow": "Tuesday", "month": "2025-08"}, {"date": "2025-08-19", "time": "08:00", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No (Neutral)", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-08"}, {"date": "2025-08-21", "time": "10:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Weak", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-08-24", "time": "09:05", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Sunday", "month": "2025-08"}, {"date": "2025-08-22", "time": "09:55", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": "Yes (Partial)", "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-08"}, {"date": "2025-08-25", "time": "09:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Moderate", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-08"}, {"date": "2025-08-26", "time": "07:20", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-08"}, {"date": "2025-08-26", "time": "08:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No (Neutral)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-08"}, {"date": "2025-08-27", "time": "09:25", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-08"}, {"date": "2025-08-28", "time": "06:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes (Partial)", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-08"}, {"date": "2025-09-02", "time": "07:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-09"}, {"date": "2025-09-02", "time": "08:20", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No (Neutral)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-09"}, {"date": "2025-09-04", "time": "07:10", "type": "Break and Retest", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Break and Retest", "conf_strength": "Strong Negative", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-09"}, {"date": "2025-09-09", "time": "09:20", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Break and Retest", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-09"}, {"date": "2025-09-11", "time": "07:15", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Break and Retest", "conf_strength": "Strong Negative", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-09"}, {"date": "2025-09-11", "time": "07:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-09"}, {"date": "2025-09-12", "time": "08:15", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-09"}, {"date": "2025-09-17", "time": "07:40", "type": "Continuation", "result": "Breakeven", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-09"}, {"date": "2025-09-17", "time": "07:40", "type": "Continuation", "result": "Breakeven", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": "No", "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Weak Negative", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-09"}, {"date": "2025-09-25", "time": "09:00", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-09"}, {"date": "2025-09-26", "time": "06:55", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "Pre-7:00", "dow": "Friday", "month": "2025-09"}, {"date": "2025-09-30", "time": "09:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-09"}, {"date": "2025-10-02", "time": "06:55", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "Pre-7:00", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-02", "time": "08:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-03", "time": "07:50", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-10"}, {"date": "2025-10-06", "time": "07:05", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-10"}, {"date": "2025-10-06", "time": "07:05", "type": "Breakout", "result": "Breakeven", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Moderate", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-10"}, {"date": "2025-10-06", "time": "10:25", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-10"}, {"date": "2025-10-09", "time": "10:20", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No (Neutral)", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Break and Retest", "conf_strength": "Moderate", "tb": "9:00-10:30", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-10", "time": "07:10", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-10"}, {"date": "2025-10-10", "time": "07:10", "type": "Breakout", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "7:00-8:00", "dow": "Friday", "month": "2025-10"}, {"date": "2025-10-15", "time": "09:00", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-15", "time": "09:00", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-16", "time": "07:20", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-16", "time": "07:30", "type": null, "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-17", "time": "08:40", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-10"}, {"date": "2025-10-17", "time": "10:25", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No (Neutral)", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-10"}, {"date": "2025-10-21", "time": "07:10", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-10"}, {"date": "2025-10-21", "time": "07:30", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2025-10"}, {"date": "2025-10-21", "time": "08:30", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-10"}, {"date": "2025-10-22", "time": "07:45", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-22", "time": "08:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": "Yes", "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-22", "time": "09:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-22", "time": "10:25", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-10"}, {"date": "2025-10-23", "time": "08:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-30", "time": null, "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Thursday", "month": "2025-10"}, {"date": "2025-10-31", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Friday", "month": "2025-10"}, {"date": "2025-11-03", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-05", "time": "08:10", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-11"}, {"date": "2025-11-07", "time": "09:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-11"}, {"date": "2025-11-10", "time": "06:50", "type": "Continuation", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "Pre-7:00", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-10", "time": "09:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Weak Negative", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-11", "time": "08:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": "Yes (Partial)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Reversal", "conf_strength": "Moderate", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2025-11"}, {"date": "2025-11-12", "time": "09:40", "type": null, "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes (Partial)", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-11"}, {"date": "2025-11-13", "time": "07:25", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Thursday", "month": "2025-11"}, {"date": "2025-11-17", "time": "06:50", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "Pre-7:00", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-17", "time": "09:25", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Break and Retest", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-19", "time": "07:15", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-11"}, {"date": "2025-11-19", "time": "08:50", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "No", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2025-11"}, {"date": "2025-11-21", "time": "09:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Friday", "month": "2025-11"}, {"date": "2025-11-24", "time": "07:30", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Monday", "month": "2025-11"}, {"date": "2025-11-25", "time": "09:35", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2025-11"}, {"date": "2025-12-01", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Monday", "month": "2025-12"}, {"date": "2025-12-01", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Monday", "month": "2025-12"}, {"date": "2025-12-02", "time": null, "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Tuesday", "month": "2025-12"}, {"date": "2025-12-02", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Tuesday", "month": "2025-12"}, {"date": "2025-12-03", "time": null, "type": null, "result": "Loss", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Wednesday", "month": "2025-12"}, {"date": "2025-12-05", "time": "08:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Friday", "month": "2025-12"}, {"date": "2025-12-08", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-12"}, {"date": "2025-12-08", "time": "08:05", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No (Neutral)", "nvda_setup": "Reversal", "conf_strength": "Moderate", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-12"}, {"date": "2025-12-10", "time": "07:05", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": null, "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2025-12"}, {"date": "2025-12-15", "time": "08:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Monday", "month": "2025-12"}, {"date": "2025-12-17", "time": "09:45", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2025-12"}, {"date": "2025-12-18", "time": null, "type": null, "result": "Win", "wicked": "No", "strong_weak": "nan", "qqq_key": null, "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "Unknown", "dow": "Thursday", "month": "2025-12"}, {"date": "2026-01-06", "time": "08:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Moderate", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2026-01"}, {"date": "2026-01-13", "time": "09:10", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2026-01"}, {"date": "2026-01-15", "time": "07:05", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "7:00-8:00", "dow": "Thursday", "month": "2026-01"}, {"date": "2026-01-15", "time": "09:35", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": "No", "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No (Neutral)", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-01"}, {"date": "2026-01-15", "time": "10:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-01"}, {"date": "2026-01-16", "time": "09:10", "type": "Continuation", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No (Neutral)", "nvda_setup": "Reversal", "conf_strength": "Moderate", "tb": "9:00-10:30", "dow": "Friday", "month": "2026-01"}, {"date": "2026-01-21", "time": "07:00", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Wednesday", "month": "2026-01"}, {"date": "2026-01-21", "time": "08:15", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2026-01"}, {"date": "2026-01-21", "time": "08:15", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Breakout", "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2026-01"}, {"date": "2026-01-21", "time": "09:40", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2026-01"}, {"date": "2026-01-22", "time": "07:30", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Break and Retest", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Thursday", "month": "2026-01"}, {"date": "2026-01-22", "time": "09:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Neutral", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-01"}, {"date": "2026-01-23", "time": "08:00", "type": "Reversal", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Friday", "month": "2026-01"}, {"date": "2026-01-23", "time": "08:30", "type": "Continuation", "result": "Loss", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Breakout", "conf_strength": "Strong Negative", "tb": "8:00-9:00", "dow": "Friday", "month": "2026-01"}, {"date": "2026-01-26", "time": "07:10", "type": "Breakout", "result": "Breakeven", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDH", "msft_key": "Yes", "msft_ft": "Yes", "msft_setup": "Break and Retest", "aapl_key": "Yes", "aapl_ft": "Yes", "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": "Yes (Partial)", "nvda_setup": "Reversal", "conf_strength": "Strong", "tb": "7:00-8:00", "dow": "Monday", "month": "2026-01"}, {"date": "2026-01-27", "time": "07:45", "type": "Break and Retest", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No", "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": "No", "nvda_setup": "Reversal", "conf_strength": "Strong Negative", "tb": "7:00-8:00", "dow": "Tuesday", "month": "2026-01"}, {"date": "2026-01-30", "time": "09:55", "type": "Breakout", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": "Yes (Partial)", "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Strong", "tb": "9:00-10:30", "dow": "Friday", "month": "2026-01"}, {"date": "2026-02-05", "time": "09:30", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-05", "time": "09:30", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": "No (Neutral)", "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": "Yes", "nvda_setup": "Breakout", "conf_strength": "Moderate", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-10", "time": "09:45", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2026-02"}, {"date": "2026-02-10", "time": "09:45", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2026-02"}, {"date": "2026-02-11", "time": "09:00", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2026-02"}, {"date": "2026-02-12", "time": "07:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-12", "time": "09:40", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Not Sure", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Breakout", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-13", "time": "10:00", "type": "Breakout", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Break and Retest", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Friday", "month": "2026-02"}, {"date": "2026-02-17", "time": "08:40", "type": "Reversal", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2026-02"}, {"date": "2026-02-17", "time": "08:40", "type": "Reversal", "result": "Win", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Tuesday", "month": "2026-02"}, {"date": "2026-02-18", "time": "09:15", "type": "Break and Retest", "result": "Loss", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2026-02"}, {"date": "2026-02-18", "time": "09:15", "type": "Break and Retest", "result": "Loss", "wicked": "Yes", "strong_weak": "Not Sure", "qqq_key": "Yes", "qqq_key_level": "nan", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Break and Retest", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Wednesday", "month": "2026-02"}, {"date": "2026-02-19", "time": "08:55", "type": "Break and Retest", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "No", "msft_ft": null, "msft_setup": null, "aapl_key": "Yes", "aapl_ft": null, "aapl_setup": "Reversal", "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Breakout", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-19", "time": "10:20", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "PDL", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Thursday", "month": "2026-02"}, {"date": "2026-02-23", "time": "07:15", "type": "Reversal", "result": "Loss", "wicked": "No", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Reversal", "conf_strength": "nan", "tb": "7:00-8:00", "dow": "Monday", "month": "2026-02"}, {"date": "2026-02-24", "time": "09:25", "type": "Reversal", "result": "Win", "wicked": "No", "strong_weak": "Strong", "qqq_key": "No", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Reversal", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "9:00-10:30", "dow": "Tuesday", "month": "2026-02"}, {"date": "2026-02-25", "time": "08:30", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": null, "msft_ft": null, "msft_setup": null, "aapl_key": null, "aapl_ft": null, "aapl_setup": null, "nvda_key": null, "nvda_ft": null, "nvda_setup": null, "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2026-02"}, {"date": "2026-02-25", "time": "08:30", "type": "Breakout", "result": "Loss", "wicked": "Yes", "strong_weak": "Strong", "qqq_key": "Yes", "qqq_key_level": "SR", "msft_key": "Yes", "msft_ft": null, "msft_setup": "Breakout", "aapl_key": "No", "aapl_ft": null, "aapl_setup": null, "nvda_key": "Yes", "nvda_ft": null, "nvda_setup": "Break and Retest", "conf_strength": "nan", "tb": "8:00-9:00", "dow": "Wednesday", "month": "2026-02"}];
+const BAKED_CONF = [{"date": "2026-02-10", "qqq_pct": -0.0015, "result": "Win", "nvda_str": 0.5, "msft_str": NaN, "aapl_str": -1.0, "nvda_exp": -0.0024000000000000002, "nvda_act": -0.0012, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": -0.001095, "aapl_act": 0.0005, "overall": "Weak"}, {"date": "2026-02-11", "qqq_pct": 0.0051, "result": "Win", "nvda_str": 1.0, "msft_str": 1.0, "aapl_str": NaN, "nvda_exp": 0.00816, "nvda_act": 0.0074, "msft_exp": 0.0038250000000000003, "msft_act": 0.0055, "aapl_exp": NaN, "aapl_act": NaN, "overall": "Strong"}, {"date": "2026-02-12", "qqq_pct": -0.0089, "result": "Win", "nvda_str": 1.0, "msft_str": NaN, "aapl_str": 1.0, "nvda_exp": -0.014240000000000001, "nvda_act": -0.013, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": -0.006497, "aapl_act": -0.0116, "overall": "Strong"}, {"date": "2026-02-12", "qqq_pct": -0.0017, "result": "Win", "nvda_str": 1.0, "msft_str": NaN, "aapl_str": 1.0, "nvda_exp": -0.00272, "nvda_act": -0.0045, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": -0.001241, "aapl_act": -0.0102, "overall": "Strong"}, {"date": "2026-02-13", "qqq_pct": 0.0024, "result": "Loss", "nvda_str": 1.0, "msft_str": 1.0, "aapl_str": NaN, "nvda_exp": 0.0038399999999999997, "nvda_act": 0.0051, "msft_exp": 0.0018, "msft_act": 0.0031, "aapl_exp": NaN, "aapl_act": NaN, "overall": "Strong"}, {"date": "2026-02-17", "qqq_pct": -0.0015, "result": "Win", "nvda_str": 0.0, "msft_str": NaN, "aapl_str": -1.0, "nvda_exp": -0.0024000000000000002, "nvda_act": -0.0011, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": -0.001095, "aapl_act": 0.0051, "overall": "Conflict"}, {"date": "2025-02-17", "qqq_pct": 0.0004, "result": "Win", "nvda_str": 1.0, "msft_str": NaN, "aapl_str": 1.0, "nvda_exp": 0.00064, "nvda_act": 0.0029, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": 0.000292, "aapl_act": 0.0031, "overall": "Strong"}, {"date": "2026-02-18", "qqq_pct": -0.0012, "result": "Loss", "nvda_str": 0.0, "msft_str": NaN, "aapl_str": 1.0, "nvda_exp": -0.0019199999999999998, "nvda_act": -0.0008, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": -0.0008759999999999999, "aapl_act": -0.0019, "overall": "Moderate"}, {"date": "2026-02-18", "qqq_pct": -0.0015, "result": "Loss", "nvda_str": 0.0, "msft_str": 1.0, "aapl_str": 1.0, "nvda_exp": -0.0024000000000000002, "nvda_act": -0.0006, "msft_exp": -0.0011250000000000001, "msft_act": -0.0017, "aapl_exp": -0.001095, "aapl_act": -0.0013, "overall": "Strong"}, {"date": "2026-02-19", "qqq_pct": 0.0018, "result": "Loss", "nvda_str": 0.0, "msft_str": NaN, "aapl_str": 0.5, "nvda_exp": 0.00288, "nvda_act": 0.0009, "msft_exp": NaN, "msft_act": NaN, "aapl_exp": 0.0013139999999999998, "aapl_act": 0.001, "overall": "Mixed/Neutral"}, {"date": "2026-02-19", "qqq_pct": 0.0026, "result": "Win", "nvda_str": 0.5, "msft_str": 0.5, "aapl_str": NaN, "nvda_exp": 0.00416, "nvda_act": 0.0028, "msft_exp": 0.00195, "msft_act": 0.0013, "aapl_exp": NaN, "aapl_act": NaN, "overall": "Moderate"}, {"date": "2026-02-23", "qqq_pct": -0.0029, "result": "Loss", "nvda_str": 0.0, "msft_str": -1.0, "aapl_str": NaN, "nvda_exp": -0.00464, "nvda_act": -0.001, "msft_exp": -0.002175, "msft_act": 0.0011, "aapl_exp": NaN, "aapl_act": NaN, "overall": "Conflict"}, {"date": "2026-02-24", "qqq_pct": -0.0001, "result": "Win", "nvda_str": -1.0, "msft_str": -1.0, "aapl_str": NaN, "nvda_exp": -0.00016, "nvda_act": 0.0002, "msft_exp": -7.500000000000001e-05, "msft_act": 0.001, "aapl_exp": NaN, "aapl_act": NaN, "overall": "Conflict"}];
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════════════════
+let T = []; // trades
+let C_DATA = []; // confluence strength rows
+let charts = {};
+let activeTickerTab = 'NVDA';
+const RISK = 1, TARGET = 1; // R multiples (normalised)
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════════════════════════════════════════
+function saveData(trades){ try{ localStorage.setItem('qqq_v1', JSON.stringify(trades)); }catch(e){} }
+function loadData(){
+  // Shared version: always use baked data
+  T = BAKED_TRADES;
+  C_DATA = BAKED_CONF;
+  afterLoad();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════════
+function nav(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>renderPage(id), 30);
+}
+function renderPage(id){
+  if(id==='dashboard') renderDashboard();
+  else if(id==='time') renderTime();
+  else if(id==='setups') renderSetups();
+  else if(id==='confluence') renderConfluence();
+  else if(id==='insights') renderInsights();
+  else if(id==='history') renderHistory();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  EXCEL IMPORT
+// ══════════════════════════════════════════════════════════════════════════════
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+function handleFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const sheetNames = wb.SheetNames;
+      const qs = wb.Sheets[sheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(qs, {defval:null});
+      T = parseQQQSheet(raw);
+      // Parse confluence sheet if present
+      const csName = sheetNames.find(s=>s.toLowerCase().includes('confluence'));
+      if(csName){
+        const cs = wb.Sheets[csName];
+        const rawC = XLSX.utils.sheet_to_json(cs, {defval:null});
+        C_DATA = parseConfluenceSheet(rawC);
+        try{ localStorage.setItem('qqq_conf_v1', JSON.stringify(C_DATA)); }catch(e){}
+      }
+      saveData(T);
+      afterLoad(file.name);
+      toast(`✅ Loaded ${T.length} trades${C_DATA.length?' + '+C_DATA.length+' confluence rows':''} from ${file.name}`, 'g');
+    }catch(err){
+      toast('❌ Error reading file: '+err.message, 'r');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseConfluenceSheet(raw){
+  const rows = [];
+  for(const row of raw){
+    const dv = row['Date'];
+    if(!dv) continue;
+    let date;
+    if(typeof dv==='number') date = new Date(Math.round((dv-25569)*86400000));
+    else date = new Date(dv);
+    if(isNaN(date)||!date) continue;
+    function sf(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+    function ss(v){ return v?String(v).trim():null; }
+    rows.push({
+      date: date.toISOString().slice(0,10),
+      qqq_pct: sf(row['QQQ move %']),
+      result: ss(row['Trade Win or Loss']),
+      nvda_str: sf(row['NVDA Strength']),
+      msft_str: sf(row['MSFT Strength']),
+      aapl_str: sf(row['AAPL Strength']),
+      nvda_exp: sf(row['NVDA Expected Move']),
+      nvda_act: sf(row['NVDA actual Move']),
+      msft_exp: sf(row['MSFT Expected Move']),
+      msft_act: sf(row['MSFT Actual Move']),
+      aapl_exp: sf(row['AAPL Expected Move']),
+      aapl_act: sf(row['AAPL Actual Move']),
+      overall: ss(row['Overall Strength']),
+    });
+  }
+  return rows;
+}
+
+function parseQQQSheet(raw){
+  const trades = [];
+  for(const row of raw){
+    // Get date
+    let date = null;
+    const dv = row['Date'];
+    if(dv){
+      if(typeof dv === 'number'){ date = new Date(Math.round((dv-25569)*86400000)); }
+      else{ date = new Date(dv); }
+      if(isNaN(date)) date = null;
+    }
+    if(!date || date < new Date('2025-02-01')) continue;
+
+    const result = normResult(row['Result']);
+    if(!result || result === 'nan' || result === 'None') continue;
+
+    function normStr(v){ return v ? String(v).trim() : null; }
+    function normKey(v){
+      const s = normStr(v);
+      if(!s) return null;
+      if(s.startsWith('Yes')) return 'Yes';
+      if(s.startsWith('No')) return 'No';
+      return null;
+    }
+    function normFT(v){
+      const s = normStr(v);
+      if(!s || s.toLowerCase() === 'sr') return null;
+      const l = s.toLowerCase();
+      if(l.includes('yes') && (l.includes('weak')||l.includes('eventual')||l.includes('later'))) return 'Yes (Partial)';
+      if(l.startsWith('yes')) return 'Yes';
+      if(l.includes('no') && l.includes('neutral')) return 'No (Neutral)';
+      if(l.startsWith('no')) return 'No';
+      return null;
+    }
+    function normSetup(v){
+      const s = normStr(v);
+      if(!s || ['PDL','SR','nan','None'].includes(s)) return null;
+      const m = {'Reversal ':'Reversal','ReverSAL':'Reversal','ReversaL':'Reversal','Breakout ':'Breakout','Consolidation':'Continuation'};
+      return m[s]||s;
+    }
+    function normType(v){
+      const s = normSetup(v);
+      if(!s) return null;
+      const m = {'Inside Candle':'Reversal','None':null,'ReversaL':'Reversal','Reversa;':'Reversal'};
+      return m[s]!==undefined ? m[s] : s;
+    }
+    function timeBucket(v){
+      if(!v) return 'Unknown';
+      try{
+        let h,m2;
+        if(typeof v === 'number'){ const tot=Math.round(v*86400); h=Math.floor(tot/3600); m2=Math.floor((tot%3600)/60); }
+        else{ const s=String(v).replace('0 days ',''); const p=s.split(':'); h=parseInt(p[0]); m2=parseInt(p[1]); }
+        const hd=h+m2/60;
+        if(hd<7) return 'Pre-7:00';
+        if(hd<8) return '7:00-8:00';
+        if(hd<9) return '8:00-9:00';
+        if(hd<=10.5) return '9:00-10:30';
+        return '10:30+';
+      }catch(e){ return 'Unknown'; }
+    }
+    function fmtTime(v){
+      if(!v) return null;
+      try{
+        if(typeof v === 'number'){ const tot=Math.round(v*86400); return `${String(Math.floor(tot/3600)).padStart(2,'0')}:${String(Math.floor((tot%3600)/60)).padStart(2,'0')}`; }
+        return String(v).replace('0 days ','').slice(0,5);
+      }catch(e){ return null; }
+    }
+
+    const normConf = v => {
+      const s = normStr(v);
+      if(!s) return null;
+      return s.replace('Netural','Neutral').replace(/\s+$/,'');
+    };
+
+    trades.push({
+      date: date.toISOString().slice(0,10),
+      time: fmtTime(row['Time of Entry']),
+      type: normType(row['Type of Trade']),
+      result,
+      wicked: normStr(row['Wicked '])==='Yes' ? 'Yes' : 'No',
+      strong_weak: normStr(row['Strong or Weak Play']),
+      qqq_key: normKey(row['Is QQQ at Key Level']),
+      qqq_key_level: normStr(row['QQQ Key Level']),
+      msft_key: normKey(row['Is MSFT at Key Level']),
+      msft_ft: normFT(row['Did MSFT Follow Through?']),
+      msft_setup: normSetup(row['MSFT Set up Type']),
+      aapl_key: normKey(row['Is AAPL at Key Level?']),
+      aapl_ft: normFT(row['Did AAPL Follow Through?']),
+      aapl_setup: normSetup(row['AAPL Set up Type']),
+      nvda_key: normKey(row['Is NVDA at Key Level']),
+      nvda_ft: normFT(row['Did NVDA Follow Through?']),
+      nvda_setup: normSetup(row['NVDA Set up Type']),
+      conf_strength: normConf(row['Confluence Strength ']),
+      tb: timeBucket(row['Time of Entry']),
+      dow: date.toLocaleDateString('en-US',{weekday:'long'}),
+      month: date.toISOString().slice(0,7),
+    });
+  }
+  return trades;
+}
+function normResult(v){
+  if(!v) return null;
+  const s = String(v).trim();
+  const m = {'Win':'Win','Win ':'Win','win':'Win','Loss':'Loss','Loss ':'Loss','loss':'Loss','Breakeven':'Breakeven','Breakeven ':'Breakeven'};
+  return m[s]||s;
+}
+
+function afterLoad(fname){
+  const wins = T.filter(t=>t.result==='Win').length;
+  const losses = T.filter(t=>t.result==='Loss').length;
+  const wr = wins+losses ? (wins/(wins+losses)*100).toFixed(1) : 0;
+  document.getElementById('sb-wr').textContent = wr+'%';
+  document.getElementById('sb-wl').textContent = `${wins}W / ${losses}L / ${T.filter(t=>t.result==='Breakeven').length}BE`;
+  document.getElementById('sb-last').textContent = 'Data: Feb 2025 – Feb 2026';
+
+  // Update status
+  const st = document.getElementById('import-status');
+  st.textContent = `✅ ${T.length} trades loaded · ${wins}W / ${losses}L / ${T.filter(t=>t.result==='Breakeven').length} BE · Win Rate: ${wr}% · ${[...new Set(T.map(t=>t.month))].length} months`;
+  st.classList.add('show');
+
+  // Populate month filter
+  const months = [...new Set(T.map(t=>t.month))].sort();
+  const sel = document.getElementById('f-month');
+  sel.innerHTML = '<option value="">All Months</option>'+months.map(m=>`<option>${m}</option>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+function wr(arr){
+  const w=arr.filter(t=>t.result==='Win').length;
+  const l=arr.filter(t=>t.result==='Loss').length;
+  return w+l ? {wr:w/(w+l)*100, w, l, total:w+l} : {wr:0,w:0,l:0,total:0};
+}
+function wrPct(arr){ return wr(arr).wr.toFixed(1)+'%'; }
+function wrColor(pct){ return pct>=65?'#00e5a0':pct>=55?'#4f8ef7':pct>=45?'#f5a623':'#ff3366'; }
+
+function mkChart(id, type, data, opts={}){
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type, data,
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:400},
+      ...opts,
+      plugins:{
+        legend:{labels:{color:'#6a7a9a',font:{family:"'Inconsolata'",size:11}},...(opts.plugins?.legend||{})},
+        tooltip:{backgroundColor:'#0c1020',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
+          titleFont:{family:"'Inconsolata'",size:11},bodyFont:{family:"'Inconsolata'",size:11},...(opts.plugins?.tooltip||{})},
+        ...(opts.plugins||{})
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════════════════════
+function renderDashboard(){
+  if(!T.length) return;
+  const wins=T.filter(t=>t.result==='Win').length;
+  const losses=T.filter(t=>t.result==='Loss').length;
+  const be=T.filter(t=>t.result==='Breakeven').length;
+  const wrPc = (wins/(wins+losses)*100).toFixed(1);
+
+  // Best time
+  const tbs = ['Pre-7:00','7:00-8:00','8:00-9:00','9:00-10:30'];
+  let bestTb='', bestTbWr=0;
+  tbs.forEach(tb=>{
+    const s=wr(T.filter(t=>t.tb===tb));
+    if(s.total>=5 && s.wr>bestTbWr){bestTbWr=s.wr;bestTb=tb;}
+  });
+
+  // Best setup
+  const setups=['Reversal','Breakout','Continuation','Break and Retest'];
+  let bestSp='', bestSpWr=0;
+  setups.forEach(sp=>{
+    const s=wr(T.filter(t=>t.type===sp));
+    if(s.total>=5 && s.wr>bestSpWr){bestSpWr=s.wr;bestSp=sp;}
+  });
+
+  // Wick-out WR — correct calculation:
+  // Each wick event = 2 rows. Wick WR = result of the 2nd row (the re-entry).
+  // Group wicked rows in pairs by date+time proximity, use 2nd row result.
+  // Simpler approach: wicked rows come in pairs; odd-index = first entry (the wick), even-index = re-entry result
+  const wickedRows = T.filter(t=>t.wicked==='Yes');
+  const wickEvents = [];
+  for(let i=1; i<wickedRows.length; i+=2){ wickEvents.push(wickedRows[i]); } // 2nd row of each pair = re-entry
+  const wickW = wickEvents.filter(t=>t.result==='Win').length;
+  const wickL = wickEvents.filter(t=>t.result==='Loss').length;
+  const wickWrPct = wickW+wickL ? (wickW/(wickW+wickL)*100).toFixed(1) : null;
+  const wickEventCount = Math.round(wickedRows.length/2);
+  // % of wicked trades: wickEventCount / (nonWickedCount + wickEventCount)
+  const nonWickedCount = T.filter(t=>t.wicked==='No').length;
+  const totalEffective = nonWickedCount + wickEventCount;
+  const wickPct = totalEffective ? (wickEventCount/totalEffective*100).toFixed(1) : 0;
+  const noWickWr = wr(T.filter(t=>t.wicked==='No'));
+
+  document.getElementById('k-wr').textContent = wrPc+'%';
+  document.getElementById('k-wl').textContent = `${wins}W / ${losses}L`;
+  document.getElementById('k-total').textContent = T.length;
+  document.getElementById('k-be').textContent = `${be} Breakeven trades`;
+  document.getElementById('k-besttime').textContent = bestTb || '—';
+  document.getElementById('k-besttimesub').textContent = bestTbWr ? bestTbWr.toFixed(1)+'% WR' : '—';
+  document.getElementById('k-bestsetup').textContent = bestSp || '—';
+  document.getElementById('k-bestsetupsub').textContent = bestSpWr ? bestSpWr.toFixed(1)+'% WR' : '—';
+  document.getElementById('k-wick').textContent = wickWrPct ? wickWrPct+'%' : '—';
+  document.getElementById('k-wicksub').textContent = `${wickEventCount} events (${wickPct}% of trades)`;
+  document.getElementById('eq-ct').textContent = T.length+' trades';
+
+  // Equity curve with -1R / +1.5R
+  const WIN_R = 1.5, LOSS_R = 1;
+  let eq=0; const eqs=[0];
+  const sorted = [...T].sort((a,b)=>a.date.localeCompare(b.date));
+  sorted.forEach(t=>{ eq+=(t.result==='Win'?WIN_R:(t.result==='Loss'?-LOSS_R:0)); eqs.push(parseFloat(eq.toFixed(2))); });
+
+  // Calc drawdown, consec wins/losses
+  let peak=0, maxDD=0;
+  eqs.forEach(v=>{ if(v>peak) peak=v; const dd=peak-v; if(dd>maxDD) maxDD=dd; });
+  let maxCW=0,maxCL=0,curW=0,curL=0;
+  sorted.forEach(t=>{
+    if(t.result==='Win'){curW++;curL=0;if(curW>maxCW)maxCW=curW;}
+    else if(t.result==='Loss'){curL++;curW=0;if(curL>maxCL)maxCL=curL;}
+    else{curW=0;curL=0;}
+  });
+  document.getElementById('eq-dd').textContent = '-'+maxDD.toFixed(1)+'R';
+  document.getElementById('eq-mw').textContent = maxCW;
+  document.getElementById('eq-ml').textContent = maxCL;
+
+  mkChart('eqChart','line',{
+    labels:eqs.map((_,i)=>i),
+    datasets:[{data:eqs,borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,0.06)',
+      pointRadius:0,fill:true,tension:0.3,borderWidth:2}]
+  },{scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'R',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',maxTicksLimit:8,font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{display:false}}});
+
+  // Monthly chart — all green, with labels inside bars
+  const months = [...new Set(sorted.map(t=>t.month))].sort();
+  const mData = months.map(m=>{ const s=wr(sorted.filter(t=>t.month===m)); return {wr:s.total?parseFloat(s.wr.toFixed(1)):0, total:s.total, w:s.w, l:s.l}; });
+  mkChart('monthChart','bar',{
+    labels:months.map(m=>m.slice(0,7)),
+    datasets:[{data:mData.map(d=>d.wr),backgroundColor:'rgba(0,229,160,0.7)',borderRadius:4,
+      datalabels:{display:true}}]
+  },{scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',maxRotation:45,font:{family:"'Inconsolata'",size:9}}}},
+     plugins:{legend:{display:false},
+       tooltip:{callbacks:{label:(ctx)=>{const d=mData[ctx.dataIndex];return ` ${d.wr}% WR · ${d.w}W/${d.l}L (${d.total} trades)`;}}}}});
+
+  // Pips
+  const pw = document.getElementById('pip-wrap');
+  pw.innerHTML='';
+  sorted.forEach(t=>{
+    const pip=document.createElement('div');
+    const isW=t.result==='Win', isL=t.result==='Loss', isWick=t.wicked==='Yes';
+    pip.className='pip '+(isW&&isWick?'ww':isL&&isWick?'wl':isW?'w':isL?'l':'b');
+    pip.title=`${t.date} · ${t.result} · ${t.type||'—'}${isWick?' (wick)':''}`;
+    pw.appendChild(pip);
+  });
+
+  // Donut with counts + %
+  const total_trades = wins+losses+be;
+  mkChart('donutChart','doughnut',{
+    labels:[
+      `Win  ${wins} (${(wins/total_trades*100).toFixed(1)}%)`,
+      `Loss  ${losses} (${(losses/total_trades*100).toFixed(1)}%)`,
+      `Breakeven  ${be} (${(be/total_trades*100).toFixed(1)}%)`
+    ],
+    datasets:[{data:[wins,losses,be],backgroundColor:['rgba(0,229,160,0.8)','rgba(255,51,102,0.8)','rgba(100,100,100,0.5)'],
+      borderColor:['#00e5a0','#ff3366','#555'],borderWidth:1}]
+  },{plugins:{legend:{position:'bottom',labels:{color:'#8899bb',padding:14,font:{family:"'Inconsolata'",size:10}}},
+    tooltip:{callbacks:{label:(ctx)=>{const v=ctx.raw; return ` ${v} trades (${(v/total_trades*100).toFixed(1)}%)`;}}}}});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TIME ANALYSIS
+// ══════════════════════════════════════════════════════════════════════════════
+function renderTime(){
+  if(!T.length) return;
+  const tbs=['Pre-7:00','7:00-8:00','8:00-9:00','9:00-10:30'];
+
+  // Heatmap
+  const hm=document.getElementById('time-heatmap');
+  hm.innerHTML='';
+  let bestTb='', bestWr=0, worstTb='', worstWr=100;
+  tbs.forEach(tb=>{
+    const s=wr(T.filter(t=>t.tb===tb));
+    if(!s.total){hm.innerHTML+=`<div class="hm-cell" style="border-color:rgba(255,255,255,0.05)"><div class="hm-label">${tb}</div><div class="hm-val" style="color:var(--dim)">—</div></div>`;return;}
+    const col=wrColor(s.wr); const bg=col+'18';
+    if(s.total>=5){
+      if(s.wr>bestWr){bestWr=s.wr;bestTb=tb;}
+      if(s.wr<worstWr){worstWr=s.wr;worstTb=tb;}
+    }
+    hm.innerHTML+=`<div class="hm-cell" style="background:${bg};border-color:${col}33">
+      <div class="hm-label">${tb}</div>
+      <div class="hm-val" style="color:${col}">${s.wr.toFixed(1)}%</div>
+      <div class="hm-sub">${s.w}W / ${s.l}L</div>
+    </div>`;
+  });
+
+  const labels=tbs.filter(tb=>wr(T.filter(t=>t.tb===tb)).total>0);
+  const wrs=labels.map(tb=>{ const s=wr(T.filter(t=>t.tb===tb)); return s.total?parseFloat(s.wr.toFixed(1)):0; });
+  mkChart('timeChart','bar',{
+    labels, datasets:[{data:wrs,backgroundColor:wrs.map(w=>wrColor(w)+'bb'),borderRadius:6}]
+  },{scales:{y:{min:0,max:85,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{display:false}}});
+
+  if(bestTb) document.getElementById('time-callout').innerHTML=
+    `<strong>Best window: ${bestTb}</strong> at ${bestWr.toFixed(1)}% win rate · <strong>Avoid: ${worstTb}</strong> at ${worstWr.toFixed(1)}% win rate`;
+
+  // DOW
+  const dows=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const dowWrs=dows.map(d=>{ const s=wr(T.filter(t=>t.dow===d)); return s.total?parseFloat(s.wr.toFixed(1)):0; });
+  mkChart('dowChart','bar',{
+    labels:dows,
+    datasets:[{data:dowWrs,backgroundColor:dowWrs.map(w=>wrColor(w)+'bb'),borderRadius:6}]
+  },{scales:{y:{min:0,max:85,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{display:false}}});
+
+  // Volume stacked
+  const volW=tbs.map(tb=>T.filter(t=>t.tb===tb&&t.result==='Win').length);
+  const volL=tbs.map(tb=>T.filter(t=>t.tb===tb&&t.result==='Loss').length);
+  const volB=tbs.map(tb=>T.filter(t=>t.tb===tb&&t.result==='Breakeven').length);
+  mkChart('timeVolChart','bar',{
+    labels:tbs,
+    datasets:[
+      {label:'Win',data:volW,backgroundColor:'rgba(0,229,160,0.7)',borderRadius:0},
+      {label:'Loss',data:volL,backgroundColor:'rgba(255,51,102,0.7)'},
+      {label:'BE',data:volB,backgroundColor:'rgba(100,100,100,0.4)'},
+    ]
+  },{scales:{y:{stacked:true,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}},
+     x:{stacked:true,grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{labels:{color:'#6a7a9a',font:{family:"'Inconsolata'",size:11}}}}});
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SETUP ANALYSIS
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSetups(){
+  if(!T.length) return;
+  const types=['Reversal','Breakout','Continuation','Break and Retest'];
+  const tbs=['Pre-7:00','7:00-8:00','8:00-9:00','9:00-10:30'];
+  const total = T.length;
+
+  // Trade type WR chart
+  const typeWrs=types.map(tp=>{ const s=wr(T.filter(t=>t.type===tp)); return s.total?parseFloat(s.wr.toFixed(1)):0; });
+  mkChart('typeChart','bar',{
+    labels:types,
+    datasets:[{data:typeWrs,backgroundColor:typeWrs.map(w=>wrColor(w)+'bb'),borderRadius:6}]
+  },{scales:{y:{min:0,max:85,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'",size:10}}}},
+     plugins:{legend:{display:false}}});
+
+  // Wick chart — use re-entry result (2nd row of each pair)
+  const wRowsS=T.filter(t=>t.wicked==='Yes');
+  const wEvtsS=[]; for(let i=1;i<wRowsS.length;i+=2) wEvtsS.push(wRowsS[i]);
+  const wWinS=wEvtsS.filter(t=>t.result==='Win').length, wLossS=wEvtsS.filter(t=>t.result==='Loss').length;
+  const wWrS=wWinS+wLossS?(wWinS/(wWinS+wLossS)*100):0;
+  const nwsS=wr(T.filter(t=>t.wicked==='No'));
+  mkChart('wickChart','bar',{
+    labels:[`Wick Re-Entry (${wEvtsS.length})`,`Normal (${nwsS.total})`],
+    datasets:[{data:[parseFloat(wWrS.toFixed(1)), nwsS.total?parseFloat(nwsS.wr.toFixed(1)):0],
+      backgroundColor:['rgba(255,51,102,0.7)','rgba(0,229,160,0.7)'],borderRadius:8}]
+  },{scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`${ctx.raw}% WR`}}}});
+
+  // Confluence usage cards
+  const tickers=[
+    {name:'NVDA',key:'nvda_key',color:'#a78bfa',emoji:'🟢'},
+    {name:'MSFT',key:'msft_key',color:'#22d3ee',emoji:'🔵'},
+    {name:'AAPL',key:'aapl_key',color:'#4f8ef7',emoji:'⚪'},
+  ];
+  const cuc=document.getElementById('conf-usage-cards');
+  cuc.innerHTML='';
+  tickers.forEach(({name,key,color,emoji})=>{
+    const used=T.filter(t=>t[key]==='Yes');
+    const pct=total?((used.length/total)*100).toFixed(1):0;
+    const s=wr(used);
+    cuc.innerHTML+=`<div class="card" style="border-top:2px solid ${color}">
+      <div class="card-title">${emoji} ${name} as Confluence</div>
+      <div style="font-size:32px;font-weight:700;color:${color};margin-bottom:4px">${pct}%</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:12px">of all trades (${used.length}/${total})</div>
+      <div class="tk-row"><span class="tk-label">Win Rate when used</span><span class="tk-val" style="color:${wrColor(s.wr)}">${s.total?s.wr.toFixed(1)+'%':'—'}</span></div>
+      <div class="tk-row"><span class="tk-label">Wins / Losses</span><span class="tk-val b">${s.w}W / ${s.l}L</span></div>
+    </div>`;
+  });
+
+  // Render ticker detail for active tab
+  renderTickerDetail(activeTickerTab);
+
+  // Strong/Weak
+  const sw=['Strong','Not Sure','Weak'];
+  const swWrs=sw.map(v=>{ const s=wr(T.filter(t=>t.strong_weak===v)); return s.total?parseFloat(s.wr.toFixed(1)):0; });
+  mkChart('swChart','bar',{
+    labels:sw,
+    datasets:[{data:swWrs,backgroundColor:swWrs.map(w=>wrColor(w)+'bb'),borderRadius:6}]
+  },{scales:{y:{min:0,max:85,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}}},
+     plugins:{legend:{display:false}}});
+}
+
+function switchTicker(name, btn){
+  activeTickerTab = name;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTickerDetail(name);
+}
+
+function renderTickerDetail(name){
+  const cfg = {
+    'NVDA':{key:'nvda_key',setupKey:'nvda_setup',color:'#a78bfa',chartPfx:'nvda'},
+    'MSFT':{key:'msft_key',setupKey:'msft_setup',color:'#22d3ee',chartPfx:'msft'},
+    'AAPL':{key:'aapl_key',setupKey:'aapl_setup',color:'#4f8ef7',chartPfx:'aapl'},
+  }[name];
+  const tbs=['Pre-7:00','7:00-8:00','8:00-9:00','9:00-10:30'];
+  const types=['Reversal','Breakout','Continuation','Break and Retest'];
+  const used=T.filter(t=>t[cfg.key]==='Yes');
+
+  // Build HTML
+  let html=`<div class="grid2">`;
+
+  // Win rate by time of day for this ticker
+  html+=`<div class="card"><div class="card-title" style="color:${cfg.color}">${name} — Win Rate by Time of Day</div>`;
+  tbs.forEach(tb=>{
+    const s=wr(used.filter(t=>t.tb===tb));
+    if(!s.total){html+=`<div class="bar-compare"><div class="bc-label"><span>${tb}</span><span style="color:var(--dim)">No data</span></div></div>`;return;}
+    const pct=parseFloat(s.wr.toFixed(1));const col=wrColor(pct);
+    html+=`<div class="bar-compare">
+      <div class="bc-label"><span>${tb}</span><span style="color:${col};font-weight:700">${pct}% <span style="color:var(--dim)">(${s.w}W/${s.l}L)</span></span></div>
+      <div class="bc-track"><div class="bc-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Win rate by setup type for this ticker
+  html+=`<div class="card"><div class="card-title" style="color:${cfg.color}">${name} — Win Rate by Setup Type</div>`;
+  types.forEach(tp=>{
+    const s=wr(used.filter(t=>t.type===tp));
+    if(!s.total) return;
+    const pct=parseFloat(s.wr.toFixed(1));const col=wrColor(pct);
+    html+=`<div class="bar-compare">
+      <div class="bc-label"><span>${tp}</span><span style="color:${col};font-weight:700">${pct}% <span style="color:var(--dim)">(${s.w}W/${s.l}L)</span></span></div>
+      <div class="bc-track"><div class="bc-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  // Setup type × Time of day matrix
+  html+=`<div class="card mt"><div class="card-title" style="color:${cfg.color}">${name} — Setup Type × Time of Day Win Rate</div>`;
+  html+=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:8px">`;
+  html+=`<thead><tr><th style="padding:8px 12px;font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--border)">Setup Type</th>`;
+  tbs.forEach(tb=>{ html+=`<th style="padding:8px 12px;font-family:'Inconsolata',monospace;font-size:8px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;text-align:center;border-bottom:1px solid var(--border)">${tb}</th>`; });
+  html+=`</tr></thead><tbody>`;
+  types.forEach((tp,i)=>{
+    const rowTrades=used.filter(t=>t.type===tp);
+    if(!rowTrades.length) return;
+    html+=`<tr>`;
+    html+=`<td style="padding:9px 12px;font-size:12px;font-weight:600;border-bottom:1px solid rgba(255,255,255,0.03)">${tp}</td>`;
+    tbs.forEach(tb=>{
+      const s=wr(rowTrades.filter(t=>t.tb===tb));
+      if(!s.total){ html+=`<td style="padding:9px 12px;text-align:center;font-family:'Inconsolata',monospace;font-size:11px;color:var(--dim);border-bottom:1px solid rgba(255,255,255,0.03)">—</td>`; return; }
+      const pct=s.wr.toFixed(1);const col=wrColor(s.wr);
+      html+=`<td style="padding:9px 12px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.03)">
+        <div style="font-family:'Inconsolata',monospace;font-size:12px;font-weight:700;color:${col}">${pct}%</div>
+        <div style="font-size:9px;color:var(--dim)">${s.w}W/${s.l}L</div>
+      </td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+
+  document.getElementById('ticker-detail').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CONFLUENCE STRENGTH PAGE
+// ══════════════════════════════════════════════════════════════════════════════
+function renderConfluence(){
+  if(!C_DATA.length){
+    document.getElementById('conf-table-wrap').innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">No confluence data found</div><div class="empty-sub">Make sure your Excel has a "Confluence Strength" sheet.</div></div>`;
+    ['ck-total','ck-strong','ck-mod','ck-conf'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
+    return;
+  }
+
+  const validC = C_DATA.filter(r=>r.result);
+  const confWR = (label) => {
+    const rows = validC.filter(r=>r.overall && r.overall.toLowerCase().includes(label.toLowerCase()));
+    const w=rows.filter(r=>r.result==='Win').length;
+    const l=rows.filter(r=>r.result==='Loss').length;
+    return {wr:w+l?(w/(w+l)*100):0,w,l,total:w+l,count:rows.length};
+  };
+
+  const strong=confWR('Strong'), mod=confWR('Moderate'), conflict=confWR('Conflict');
+  document.getElementById('ck-total').textContent = C_DATA.length;
+  document.getElementById('ck-strong').textContent = strong.total?strong.wr.toFixed(1)+'%':'—';
+  document.getElementById('ck-strong-n').textContent = strong.total?`${strong.w}W/${strong.l}L`:'No data';
+  document.getElementById('ck-mod').textContent = mod.total?mod.wr.toFixed(1)+'%':'—';
+  document.getElementById('ck-mod-n').textContent = mod.total?`${mod.w}W/${mod.l}L`:'No data';
+  document.getElementById('ck-conf').textContent = conflict.total?conflict.wr.toFixed(1)+'%':'—';
+  document.getElementById('ck-conf-n').textContent = conflict.total?`${conflict.w}W/${conflict.l}L`:'No data';
+
+  // Overall strength WR chart
+  const strLabels=['Strong','Moderate','Mixed/Neutral','Weak','Conflict'];
+  const strWrs=strLabels.map(l=>{ const s=confWR(l); return s.total?parseFloat(s.wr.toFixed(1)):0; });
+  const strCounts=strLabels.map(l=>confWR(l).count);
+  mkChart('confStrChart','bar',{
+    labels:strLabels,
+    datasets:[{data:strWrs,backgroundColor:strWrs.map(w=>wrColor(w)+'bb'),borderRadius:6}]
+  },{scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'",size:10}}}},
+     plugins:{legend:{display:false}}});
+
+  mkChart('confCountChart','bar',{
+    labels:strLabels,
+    datasets:[{data:strCounts,backgroundColor:'rgba(79,142,247,0.65)',borderRadius:6}]
+  },{scales:{y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',font:{family:"'Inconsolata'"}}},
+     x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'",size:10}}}},
+     plugins:{legend:{display:false}}});
+
+  // Per-stock strength charts
+  const strVals=[-1,0,0.5,1];
+  const strVlabels=['Inverse (-1)','Weak (0)','Moderate (0.5)','Strong (1)'];
+  ['nvda','msft','aapl'].forEach(tk=>{
+    const key=tk+'_str';
+    const wrs=strVals.map(v=>{
+      const rows=validC.filter(r=>r[key]===v);
+      const w=rows.filter(r=>r.result==='Win').length;
+      const l=rows.filter(r=>r.result==='Loss').length;
+      return w+l?(w/(w+l)*100):0;
+    });
+    const counts=strVals.map(v=>validC.filter(r=>r[key]===v).length);
+    mkChart(tk+'StrChart','bar',{
+      labels:strVlabels.map((l,i)=>`${l} (${counts[i]})`),
+      datasets:[{data:wrs.map(w=>parseFloat(w.toFixed(1))),backgroundColor:wrs.map(w=>wrColor(w)+'bb'),borderRadius:5}]
+    },{scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#4a5878',callback:v=>v+'%',font:{family:"'Inconsolata'",size:9}}},
+       x:{grid:{display:false},ticks:{color:'#4a5878',font:{family:"'Inconsolata'",size:8},maxRotation:30}}},
+       plugins:{legend:{display:false}}});
+  });
+
+  // Detail table
+  let thtml=`<div style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim);margin-bottom:10px">${C_DATA.length} confluence entries</div>
+  <div class="table-wrap"><table>
+  <thead><tr>
+    <th>Date</th><th>Result</th><th>QQQ %</th>
+    <th>NVDA Exp</th><th>NVDA Act</th><th>NVDA Str</th>
+    <th>MSFT Exp</th><th>MSFT Act</th><th>MSFT Str</th>
+    <th>AAPL Exp</th><th>AAPL Act</th><th>AAPL Str</th>
+    <th>Overall</th>
+  </tr></thead><tbody>`;
+  C_DATA.forEach(r=>{
+    const rc=r.result==='Win'?'win':r.result==='Loss'?'loss':'be';
+    const pct=v=>v!=null?(v*100).toFixed(2)+'%':'—';
+    const str=v=>v!=null?v:'—';
+    const ovCol=r.overall&&r.overall.includes('Strong')&&!r.overall.includes('Negative')&&!r.overall.includes('Conflict')?'var(--win)':
+                r.overall&&(r.overall.includes('Conflict')||r.overall.includes('Negative'))?'var(--loss)':'var(--dim)';
+    thtml+=`<tr>
+      <td style="font-family:'Inconsolata',monospace">${r.date}</td>
+      <td><span class="pill ${rc}">${r.result||'—'}</span></td>
+      <td style="font-family:'Inconsolata',monospace">${r.qqq_pct!=null?(r.qqq_pct*100).toFixed(3)+'%':'—'}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim)">${pct(r.nvda_exp)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px">${pct(r.nvda_act)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-weight:700;color:${wrColor(r.nvda_str===1?70:r.nvda_str===0.5?60:r.nvda_str===0?45:30)}">${str(r.nvda_str)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim)">${pct(r.msft_exp)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px">${pct(r.msft_act)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-weight:700;color:${wrColor(r.msft_str===1?70:r.msft_str===0.5?60:r.msft_str===0?45:30)}">${str(r.msft_str)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim)">${pct(r.aapl_exp)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px">${pct(r.aapl_act)}</td>
+      <td style="font-family:'Inconsolata',monospace;font-weight:700;color:${wrColor(r.aapl_str===1?70:r.aapl_str===0.5?60:r.aapl_str===0?45:30)}">${str(r.aapl_str)}</td>
+      <td style="font-weight:700;color:${ovCol}">${r.overall||'—'}</td>
+    </tr>`;
+  });
+  thtml+=`</tbody></table></div>`;
+  document.getElementById('conf-table-wrap').innerHTML=thtml;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  INSIGHTS
+// ══════════════════════════════════════════════════════════════════════════════
+function renderInsights(){
+  const grid=document.getElementById('insights-grid');
+  if(T.length<10){
+    grid.innerHTML=`<div class="card" style="grid-column:1/-1;text-align:center;padding:60px">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">Need at least 10 trades</div>
+      <div class="empty-sub">You have ${T.length} trades loaded.</div>
+    </div>`;
+    return;
+  }
+
+  const insights=[];
+  const tbs=['Pre-7:00','7:00-8:00','8:00-9:00','9:00-10:30'];
+  const tbStats=tbs.map(tb=>({tb,s:wr(T.filter(t=>t.tb===tb))})).filter(x=>x.s.total>=5);
+  if(tbStats.length){
+    const best=tbStats.reduce((b,x)=>x.s.wr>b.s.wr?x:b);
+    const worst=tbStats.reduce((b,x)=>x.s.wr<b.s.wr?x:b);
+    insights.push({type:'g',emoji:'⏰',label:'Best Time Window',
+      text:`<strong>${best.tb}</strong> is your strongest window at <strong>${best.s.wr.toFixed(1)}% win rate</strong> (${best.s.total} trades). Focus your energy here.`});
+    if(worst.tb!==best.tb) insights.push({type:'r',emoji:'⚠️',label:'Weakest Window',
+      text:`<strong>${worst.tb}</strong> is your weakest at <strong>${worst.s.wr.toFixed(1)}%</strong> (${worst.s.total} trades). Consider reducing size or skipping this window.`});
+  }
+
+  // Wick-out
+  const nws=wr(T.filter(t=>t.wicked==='No'));
+  const wRows=T.filter(t=>t.wicked==='Yes');
+  const wEvts=[];for(let i=1;i<wRows.length;i+=2)wEvts.push(wRows[i]);
+  const wWin=wEvts.filter(t=>t.result==='Win').length, wLoss=wEvts.filter(t=>t.result==='Loss').length;
+  const wWrPct=wWin+wLoss?(wWin/(wWin+wLoss)*100):0;
+  const wickEvtCount=Math.round(wRows.length/2);
+  const nonWk=T.filter(t=>t.wicked==='No').length;
+  const wickPctOfTotal=nonWk+wickEvtCount?(wickEvtCount/(nonWk+wickEvtCount)*100).toFixed(1):0;
+  if(wickEvtCount>=3) insights.push({type:'r',emoji:'🎯',label:'Wick-Out Analysis',
+    text:`<strong>${wickEvtCount} wick events</strong> (${wickPctOfTotal}% of your trades). Re-entry win rate after being wicked: <strong>${wWrPct.toFixed(1)}%</strong> (${wWin}W/${wLoss}L). Normal trade WR: <strong>${nws.wr.toFixed(1)}%</strong>.`});
+
+  // NVDA follow-through
+  const nvdaY=wr(T.filter(t=>t.nvda_ft==='Yes')), nvdaN=wr(T.filter(t=>t.nvda_ft==='No'));
+  if(nvdaY.total>=5&&nvdaN.total>=5) insights.push({type:nvdaY.wr>nvdaN.wr?'g':'b',emoji:'📈',label:'NVDA Follow-Through Impact',
+    text:`When NVDA follows through: <strong>${nvdaY.wr.toFixed(1)}% WR</strong> (${nvdaY.total} trades). When it doesn't: <strong>${nvdaN.wr.toFixed(1)}% WR</strong> (${nvdaN.total} trades). NVDA confirmation is a <strong>${nvdaY.wr>nvdaN.wr?'positive':'negative'} signal.</strong>`});
+
+  // QQQ key level
+  const qqlY=wr(T.filter(t=>t.qqq_key==='Yes')), qqlN=wr(T.filter(t=>t.qqq_key==='No'));
+  if(qqlY.total>=5&&qqlN.total>=5){
+    const diff=qqlY.wr-qqlN.wr;
+    insights.push({type:diff>0?'g':'b',emoji:'🔑',label:'QQQ Key Level Edge',
+      text:`At key level: <strong>${qqlY.wr.toFixed(1)}%</strong> (${qqlY.total} trades). Not at level: <strong>${qqlN.wr.toFixed(1)}%</strong> (${qqlN.total} trades). ${Math.abs(diff)>5?`<strong>${diff>0?'Being at a key level HELPS your win rate.':'Being at a key level actually HURTS — review your entries.'}</strong>`:''}`});
+  }
+
+  // Bounce-back
+  let alW=0,alT=0,awW=0,awT=0;
+  const sorted=[...T].sort((a,b)=>a.date.localeCompare(b.date));
+  for(let i=1;i<sorted.length;i++){
+    if(sorted[i-1].result==='Loss'){alT++;if(sorted[i].result==='Win')alW++;}
+    else if(sorted[i-1].result==='Win'){awT++;if(sorted[i].result==='Win')awW++;}
+  }
+  const alWr=alT?alW/alT*100:0, awWr=awT?awW/awT*100:0;
+  if(alT>=10&&awT>=10) insights.push({type:alWr>awWr?'b':'gold',emoji:'💪',label:'Bounce-Back Rate',
+    text:`After a loss: <strong>${alWr.toFixed(1)}% WR</strong> (${alT} trades). After a win: <strong>${awWr.toFixed(1)}% WR</strong> (${awT} trades). ${alWr>awWr?'<strong>You bounce back strong after losses</strong> — good re-entry discipline.':'<strong>You perform better after wins</strong> — momentum trading suits you.'}`});
+
+  // Best setup
+  const setups=['Reversal','Breakout','Continuation','Break and Retest'];
+  const spStats=setups.map(sp=>({sp,s:wr(T.filter(t=>t.type===sp))})).filter(x=>x.s.total>=5);
+  if(spStats.length){
+    const best=spStats.reduce((b,x)=>x.s.wr>b.s.wr?x:b);
+    insights.push({type:'g',emoji:'🎯',label:'Top Setup Type',
+      text:`<strong>${best.sp}</strong> is your best-performing setup at <strong>${best.s.wr.toFixed(1)}% win rate</strong> (${best.s.total} trades, $${(best.s.w*TARGET-best.s.l*RISK).toFixed(1)}R net). Lean into this.`});
+  }
+
+  grid.innerHTML=insights.map(ins=>`
+    <div class="insight-card ${ins.type}">
+      <div class="insight-emoji">${ins.emoji}</div>
+      <div class="insight-label">${ins.label}</div>
+      <div class="insight-text">${ins.text}</div>
+    </div>`).join('') || `<div class="card" style="grid-column:1/-1;padding:40px;text-align:center;color:var(--dim)">Keep logging trades — more insights will appear as patterns emerge.</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TRADE HISTORY
+// ══════════════════════════════════════════════════════════════════════════════
+function renderHistory(){
+  const fR=document.getElementById('f-result')?.value||'';
+  const fT=document.getElementById('f-type')?.value||'';
+  const fW=document.getElementById('f-wick')?.value||'';
+  const fQ=document.getElementById('f-qqq')?.value||'';
+  const fM=document.getElementById('f-month')?.value||'';
+  let trades=[...T].sort((a,b)=>b.date.localeCompare(a.date));
+  if(fR) trades=trades.filter(t=>t.result===fR);
+  if(fT) trades=trades.filter(t=>t.type===fT);
+  if(fW) trades=trades.filter(t=>t.wicked===fW);
+  if(fQ) trades=trades.filter(t=>t.qqq_key===fQ);
+  if(fM) trades=trades.filter(t=>t.month===fM);
+
+  const wrap=document.getElementById('history-wrap');
+  if(!trades.length){ wrap.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">No trades match</div></div>`; return; }
+
+  let html=`<div style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim);margin-bottom:10px">${trades.length} trades</div>
+  <div class="table-wrap"><table>
+  <thead><tr><th>#</th><th>Date</th><th>Time</th><th>Type</th><th>Result</th><th>Wicked</th><th>QQQ Level</th><th>NVDA FT</th><th>AAPL FT</th><th>MSFT FT</th><th>Confluence</th></tr></thead><tbody>`;
+  trades.forEach((t,i)=>{
+    const rc=t.result==='Win'?'win':t.result==='Loss'?'loss':'be';
+    html+=`<tr>
+      <td style="font-family:'Inconsolata',monospace;color:var(--dim)">${trades.length-i}</td>
+      <td style="font-family:'Inconsolata',monospace">${t.date}</td>
+      <td style="font-family:'Inconsolata',monospace;color:var(--dim)">${t.time||'—'}</td>
+      <td>${t.type||'—'}</td>
+      <td><span class="pill ${rc}">${t.result==='Win'?'✅':t.result==='Loss'?'❌':'⬜'} ${t.result}</span></td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:${t.wicked==='Yes'?'var(--gold)':'var(--dim)'}">${t.wicked}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:${t.qqq_key==='Yes'?'var(--win)':'var(--dim)'}">${t.qqq_key||'—'}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:${t.nvda_ft==='Yes'?'var(--win)':t.nvda_ft==='No'?'var(--loss)':'var(--dim)'}">${t.nvda_ft||'—'}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:${t.aapl_ft==='Yes'?'var(--win)':t.aapl_ft==='No'?'var(--loss)':'var(--dim)'}">${t.aapl_ft||'—'}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:${t.msft_ft==='Yes'?'var(--win)':t.msft_ft==='No'?'var(--loss)':'var(--dim)'}">${t.msft_ft||'—'}</td>
+      <td style="font-family:'Inconsolata',monospace;font-size:10px;color:var(--dim)">${t.conf_strength||'—'}</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  wrap.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════════════════════════
+function toast(msg,type='g'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+type;
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>
